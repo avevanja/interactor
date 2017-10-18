@@ -31,39 +31,9 @@ public class SignInInteractor {
 
 
     public Observable<UserAuth> signIn(SignInBody signInBody, Activity context) {
-        return Observable.create(
-                subscriber -> signInRepository.signInFireBase(signInBody, context).subscribe(new DisposableObserver<Task<AuthResult>>() {
-                    @Override
-                    public void onNext(Task<AuthResult> task) {
-                        signInBody.setFirebaseToken(FirebaseInstanceId.getInstance().getToken());
-                        signInBody.setPassword(AppConstants.DEFAULT_PASSWORD);
-                        signInRepository.signInWithEmail(signInBody).subscribeOn(Schedulers.io())
-                                .subscribe(new DisposableObserver<UserAuth>() {
-                                    @Override
-                                    public void onNext(UserAuth userAuth) {
-                                        subscriber.onNext(userAuth);
-                                    }
-
-                                    @Override
-                                    public void onError(Throwable e) {
-                                        subscriber.onError(e);
-                                    }
-
-                                    @Override
-                                    public void onComplete() {
-                                    }
-                                });
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        subscriber.onError(e);
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                }));
+        return signInRepository.signInFireBase(signInBody, context)
+            .doOnNext(task -> signInBody.setFirebaseToken(FirebaseInstanceId.getInstance().getToken()))
+            .doOnNext(task -> signInBody.setPassword(AppConstants.DEFAULT_PASSWORD))
+            .flatMap(task -> signInRepository.signInWithEmail(signInBody));
     }
 }
